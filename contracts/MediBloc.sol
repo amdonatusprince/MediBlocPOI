@@ -5,56 +5,55 @@ import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "./interfaces/IProofOfIdentity.sol";
 
-contract MediBloc is Ownable{
+contract MediBloc is Ownable, AccessControl {
 
-    address i_owner;
+    address private i_owner;
     IProofOfIdentity private _proofOfIdentity;
 
     event POIAddressUpdated(address indexed poiAddress);
 
-  
-   struct Allergy {
-       string name;
-       string description;
-       string startDate;
-       string medication;
-   }
+    struct Allergy {
+        string name;
+        string description;
+        string startDate;
+        string medication;
+    }
 
-   struct Disability {
-       string name;
-       string description;
-       string diagnosisDate;
-       string medication;
-   }
+    struct Disability {
+        string name;
+        string description;
+        string diagnosisDate;
+        string medication;
+    }
 
-   struct PatientStats {
-       string bloodGroup;
-       string genotype;
-       uint256 weight;
-   }
+    struct PatientStats {
+        string bloodGroup;
+        string genotype;
+        uint256 weight;
+    }
 
-   struct Diagnosis {
-       string name;
-       string diagnosisDate;
-       string description;
-       string medication;
-   }
+    struct Diagnosis {
+        string name;
+        string diagnosisDate;
+        string description;
+        string medication;
+    }
 
-   mapping(address => Allergy[]) private allergies;
-   mapping(address => Disability[]) private disabilities;
-   mapping(address => PatientStats) private patientStats;
-   mapping(address => Diagnosis[]) private diagnoses;
-   mapping(address => mapping(address => bool)) private accessRights;
+    mapping(address => Allergy[]) private allergies;
+    mapping(address => Disability[]) private disabilities;
+    mapping(address => PatientStats) private patientStats;
+    mapping(address => Diagnosis[]) private diagnoses;
+    mapping(address => mapping(address => bool)) private accessRights;
 
-   constructor(address proofOfIdentity_) Ownable(msg.sender){
-       i_owner = msg.sender;
-       setPOIAddress(proofOfIdentity_);
-       _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
-   }
+    constructor(address proofOfIdentity_) Ownable() {
+        i_owner = msg.sender;
+        setPOIAddress(proofOfIdentity_);
+        _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
+    }
 
-   function getAllergies(address _user) public view returns (Allergy[] memory) {
-       return allergies[_user];
-   }
+    function getAllergies(address _user) public view returns (Allergy[] memory) {
+        return allergies[_user];
+    }
 
     function getDisabilities(address _user) public view returns (Disability[] memory) {
         return disabilities[_user];
@@ -84,31 +83,29 @@ contract MediBloc is Ownable{
         diagnoses[_user].push(Diagnosis(_name, _diagnosisDate, _description, _medication));
     }
 
-   function viewInfo(address _viewer, address _viewed) public onlyOwner {
-       accessRights[_viewer][_viewed] = true;
-   }
+    function viewInfo(address _viewer, address _viewed) public onlyOwner {
+        accessRights[_viewer][_viewed] = true;
+    }
 
-   function revokeViewInfo(address _viewer, address _viewed) public onlyOwner {
-       accessRights[_viewer][_viewed] = false;
-   }
+    function revokeViewInfo(address _viewer, address _viewed) public onlyOwner {
+        accessRights[_viewer][_viewed] = false;
+    }
 
     function poiAddress() external view returns (address) {
         return address(_proofOfIdentity);
     }
 
     function setPOIAddress(address poi) public onlyRole(DEFAULT_ADMIN_ROLE) {
-        if (poi == address(0)) revert MediBlocPOI__ZeroAddress();
-
+        require(poi != address(0), "MediBloc: Zero address not allowed");
         _proofOfIdentity = IProofOfIdentity(poi);
         emit POIAddressUpdated(poi);
     }
 
-    function _hasID(address account) private view returns (bool) {
+    function hasID(address account) public view returns (bool) {
         return _proofOfIdentity.balanceOf(account) > 0;
     }
 
-    function _isSuspended(address account) private view returns (bool) {
+    function isSuspended(address account) public view returns (bool) {
         return _proofOfIdentity.isSuspended(account);
     }
-
 }
